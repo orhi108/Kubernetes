@@ -1,0 +1,40 @@
+confirm=$1
+
+if [ -z "$confirm" ]; then
+    echo -e "Usage:\n $0 [yes] \n  yes - options to apply the change other wise just dry run"
+    exit 1
+fi
+
+# Map of custom values - need to be modified for each use case
+declare -A values=(
+    [namespace]=usecase1 
+    [username]=username
+    [serviceaccount]=usecase1-sa
+    [groupname]=devs
+)
+
+# List of template files
+declare -a templates=(
+    namespace.yaml
+    networkpolicy.yaml
+    quota.yaml  
+    role.yaml  
+    rolebinding.yaml
+    serviceaccount.yaml
+)
+
+
+for template in ${templates[@]}; do
+    cp ${template} tmp_${template}
+    for parameter in "${!values[@]}"; do
+        sed -i "s/{{$parameter}}/${values[$parameter]}/" tmp_${template} && echo " \>\>\> $parameter has been modified in tmp_${template} with ${values[$parameter]} "
+    done
+    if [[ -n $confirm && $confirm = 'yes' ]]; then
+        cat tmp_${template} | kubectl apply -f -
+    else
+        echo "======== ${template} =========" 
+        cat tmp_${template}
+        echo
+    fi
+    rm tmp_${template}
+done
